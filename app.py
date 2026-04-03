@@ -76,7 +76,7 @@ HOME_TEMPLATE = """
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ketchup & Mustard Grill</title>
+    <title>NSUBUGA HOT MEALS</title>
     <style>
         :root {
             --red: #e63946;
