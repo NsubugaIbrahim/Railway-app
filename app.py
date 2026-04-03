@@ -138,62 +138,12 @@ HOME_TEMPLATE = """
             padding: 28px;
         }
 
-        .workspace {
+        .shell {
             width: min(1200px, 100%);
-        }
-
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 16px;
-            color: white;
-        }
-
-        .topbar small {
-            opacity: 0.9;
-        }
-
-        .top-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .ghost-btn {
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            background: rgba(255, 255, 255, 0.12);
-            color: white;
-            border-radius: 999px;
-            padding: 10px 14px;
-            font-weight: 700;
-            cursor: pointer;
-            backdrop-filter: blur(8px);
-        }
-
-        .viewport {
-            overflow: hidden;
-            border-radius: 28px;
-        }
-
-        .slider {
-            display: flex;
-            width: 200%;
-            transition: transform 0.45s ease;
-        }
-
-        .slider.show-orders {
-            transform: translateX(-50%);
-        }
-
-        .panel-screen {
-            width: 50%;
-            padding-right: 12px;
-        }
-
-        .panel-screen:last-child {
-            padding-right: 0;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 24px;
+            align-items: stretch;
         }
 
         .hero, .panel {
@@ -207,6 +157,19 @@ HOME_TEMPLATE = """
         .hero {
             padding: 36px;
             position: relative;
+        }
+
+        .eyebrow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            color: white;
+        }
+
+        .eyebrow small {
+            opacity: 0.9;
         }
 
         .badge {
@@ -327,6 +290,15 @@ HOME_TEMPLATE = """
             transform: translateY(-1px);
         }
 
+        .btn.secondary {
+            background: linear-gradient(90deg, #7f0909, #c2410c);
+        }
+
+        .btn.small {
+            padding: 12px 14px;
+            font-size: 0.95rem;
+        }
+
         .message {
             margin-bottom: 18px;
             padding: 14px 16px;
@@ -343,14 +315,6 @@ HOME_TEMPLATE = """
         .message.error {
             background: rgba(230, 57, 70, 0.12);
             border: 1px solid rgba(183, 28, 28, 0.24);
-        }
-
-        .orders-controls {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 12px;
-            align-items: end;
-            margin-bottom: 18px;
         }
 
         .orders-list {
@@ -375,36 +339,20 @@ HOME_TEMPLATE = """
             margin-bottom: 12px;
         }
 
-        .order-actions {
+        .order-fields {
             display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 12px;
+            grid-template-columns: 0.8fr 1.2fr;
+            gap: 10px;
+            margin-bottom: 12px;
         }
 
-        .mini-btn {
-            width: auto;
-            padding: 12px 14px;
-            margin-top: 0;
-            border-radius: 14px;
-        }
-
-        .btn.secondary {
-            background: linear-gradient(90deg, #7f0909, #c2410c);
-        }
-
-        .btn.small {
-            padding: 12px 14px;
-            font-size: 0.95rem;
+        .order-actions {
+            display: flex;
+            justify-content: flex-end;
         }
 
         .danger {
             background: linear-gradient(90deg, #9b1c1c, #ef4444);
-        }
-
-        .inline-fields {
-            display: grid;
-            grid-template-columns: 0.8fr 1.2fr;
-            gap: 10px;
         }
 
         .summary {
@@ -425,174 +373,46 @@ HOME_TEMPLATE = """
         }
 
         @media (max-width: 900px) {
-            .topbar {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
+            .shell { grid-template-columns: 1fr; }
             .stats { grid-template-columns: 1fr; }
-            .orders-controls, .order-actions, .inline-fields { grid-template-columns: 1fr; }
-            .panel-screen { width: 50%; }
+            .eyebrow { flex-direction: column; align-items: flex-start; }
+            .order-fields { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="workspace">
-        <div class="topbar">
+    <main class="shell">
+        <section class="hero">
+            <div class="eyebrow">
             <div>
                 <div class="badge">NSUBUGA HOT MEALS</div>
-                <small>Simple ordering with slide-over order management</small>
+                <small>Simple ordering with side-by-side order management</small>
             </div>
-            <div class="top-actions">
-                <button class="ghost-btn" type="button" data-slide="order">Order panel</button>
-                <button class="ghost-btn" type="button" data-slide="orders">My orders</button>
+        </section>
+
+        <section class="panel">
+            <h1>Fast, fun, and built for hungry people.</h1>
+            <p class="lead">
+                Enter your customer ID, choose your meal from the dropdown, and send your order straight to the kitchen.
+                Clean, simple, and styled like a classic red-and-yellow burger joint.
+            </p>
+
+            <div class="stats">
+                <div class="stat"><strong>01</strong>Pick your meal</div>
+                <div class="stat"><strong>02</strong>Enter your ID</div>
+                <div class="stat"><strong>03</strong>Place order</div>
             </div>
-        </div>
 
-        <div class="viewport">
-            <div class="slider {% if start_panel == 'orders' %}show-orders{% endif %}" id="panelSlider">
-                <section class="panel-screen">
-                    <div class="shell">
-                        <section class="hero">
-                            <div class="badge">NSUBUGA HOT MEALS</div>
-                            <h1>Fast, fun, and built for hungry people.</h1>
-                            <p class="lead">
-                                Enter your customer ID, choose your meal from the dropdown, and send your order straight to the kitchen.
-                                Clean, simple, and styled like a classic red-and-yellow burger joint.
-                            </p>
-
-                            <div class="stats">
-                                <div class="stat"><strong>01</strong>Pick your meal</div>
-                                <div class="stat"><strong>02</strong>Enter your ID</div>
-                                <div class="stat"><strong>03</strong>Place order</div>
-                            </div>
-
-                            <div class="summary">
-                                <h3>Need another view?</h3>
-                                <p>Use the button to slide over to your orders and manage them.</p>
-                                <button class="btn secondary" type="button" data-slide="orders">View my orders</button>
-                            </div>
-
-                            {% if confirmation %}
-                            <div class="summary">
-                                <h3>Order received</h3>
-                                <p><span>Customer ID:</span> {{ confirmation.customer_id }}</p>
-                                <p><span>Order:</span> {{ confirmation.menu_item }}</p>
-                                <p><span>Status:</span> {{ confirmation.status }}</p>
-                            </div>
-                            {% endif %}
-                        </section>
-
-                        <section class="panel">
-                            <div class="panel-header">
-                                <div>
-                                    <h2>Start your order</h2>
-                                    <p class="panel-subtitle">Use the form below to submit a simple restaurant order.</p>
-                                </div>
-                                <button class="ghost-btn" type="button" data-slide="orders">Go to orders</button>
-                            </div>
-
-                            {% if error %}
-                            <div class="message error">{{ error }}</div>
-                            {% endif %}
-
-                            {% if saved_to_db %}
-                            <div class="message success">Your order was saved successfully.</div>
-                            {% endif %}
-
-                            <form method="post">
-                                <label for="customer_id">Customer ID</label>
-                                <input id="customer_id" name="customer_id" placeholder="Enter your customer ID" value="{{ customer_id or '' }}" required>
-
-                                <label for="menu_item">Menu Item</label>
-                                <select id="menu_item" name="menu_item" required>
-                                    <option value="" disabled {% if not menu_item %}selected{% endif %}>Choose your order</option>
-                                    {% for item in menu_items %}
-                                    <option value="{{ item }}" {% if menu_item == item %}selected{% endif %}>{{ item }}</option>
-                                    {% endfor %}
-                                </select>
-
-                                <button class="btn" type="submit">Place Order</button>
-                            </form>
-                        </section>
-                    </div>
-                </section>
-
-                <section class="panel-screen">
-                    <div class="panel">
-                        <div class="panel-header">
-                            <div>
-                                <h2>My orders</h2>
-                                <p class="panel-subtitle">Search, edit, or delete your restaurant orders.</p>
-                            </div>
-                            <button class="ghost-btn" type="button" data-slide="order">Back to order form</button>
-                        </div>
-
-                        <form method="get" action="/" class="orders-controls">
-                            <div>
-                                <label for="customer_filter">Filter by Customer ID</label>
-                                <input id="customer_filter" name="customer_id" value="{{ filter_customer_id or '' }}" placeholder="Enter your customer ID">
-                                <input type="hidden" name="panel" value="orders">
-                            </div>
-                            <button class="btn mini-btn" type="submit">Find my orders</button>
-                        </form>
-
-                        {% if orders_error %}
-                        <div class="message error">{{ orders_error }}</div>
-                        {% endif %}
-
-                        <div class="orders-list">
-                            {% if orders %}
-                            {% for order in orders %}
-                            <div class="order-card">
-                                <div class="order-meta">
-                                    <span><strong>#{{ order.id }}</strong></span>
-                                    <span>Customer: {{ order.customer_id }}</span>
-                                    <span>{{ order.created_at }}</span>
-                                </div>
-
-                                <form method="post" action="/orders/{{ order.id }}/update" class="order-actions">
-                                    <input type="hidden" name="panel" value="orders">
-                                    <input type="hidden" name="customer_filter" value="{{ filter_customer_id or '' }}">
-                                    <div class="inline-fields">
-                                        <input name="customer_id" value="{{ order.customer_id }}" required>
-                                        <select name="menu_item" required>
-                                            {% for item in menu_items %}
-                                            <option value="{{ item }}" {% if order.menu_item == item %}selected{% endif %}>{{ item }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <button class="btn small" type="submit">Save</button>
-                                </form>
-
-                                <form method="post" action="/orders/{{ order.id }}/delete">
-                                    <input type="hidden" name="customer_filter" value="{{ filter_customer_id or '' }}">
-                                    <button class="btn small danger" type="submit">Delete</button>
-                                </form>
-                            </div>
-                            {% endfor %}
-                            {% else %}
-                            <div class="summary">
-                                <h3>No orders yet</h3>
-                                <p>Place an order first, then slide back here to manage it.</p>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </section>
+            {% if confirmation %}
+            <div class="summary">
+                <h3>Order received</h3>
+                <p><span>Customer ID:</span> {{ confirmation.customer_id }}</p>
+                <p><span>Order:</span> {{ confirmation.menu_item }}</p>
+                <p><span>Status:</span> {{ confirmation.status }}</p>
             </div>
-        </div>
-    </div>
-
-    <script>
-        const slider = document.getElementById("panelSlider");
-        document.querySelectorAll("[data-slide]").forEach((button) => {
-            button.addEventListener("click", () => {
-                const target = button.getAttribute("data-slide");
-                slider.classList.toggle("show-orders", target === "orders");
-            });
-        });
-    </script>
+            {% endif %}
+        </section>
+    </main>
 </body>
 </html>
 """
@@ -662,7 +482,6 @@ def home():
     error = None
     saved_to_db = False
     filter_customer_id = request.args.get("customer_id", "").strip()
-    start_panel = request.args.get("panel", "order")
     orders_error = None
     orders = get_orders(filter_customer_id or None)
 
@@ -694,7 +513,6 @@ def home():
             orders=orders,
             orders_error=orders_error,
             filter_customer_id=filter_customer_id,
-            start_panel="orders",
         )
 
     return render_template_string(
@@ -708,7 +526,6 @@ def home():
         orders=orders,
         orders_error=orders_error,
         filter_customer_id=filter_customer_id,
-        start_panel=start_panel,
     )
 
 
