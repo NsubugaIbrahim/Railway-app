@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, redirect, url_for
 import psycopg2
 from dotenv import load_dotenv
 
@@ -70,6 +70,38 @@ MENU_ITEMS = [
     "Veggie Wrap",
 ]
 
+
+def order_row_to_dict(row):
+    return {
+        "id": row[0],
+        "customer_id": row[1],
+        "menu_item": row[2],
+        "created_at": row[3],
+    }
+
+
+def get_orders(customer_id=None):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        if customer_id:
+            cur.execute(
+                "SELECT id, customer_id, menu_item, created_at FROM orders WHERE customer_id=%s ORDER BY id DESC;",
+                (customer_id,)
+            )
+        else:
+            cur.execute("SELECT id, customer_id, menu_item, created_at FROM orders ORDER BY id DESC;")
+
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return [order_row_to_dict(row) for row in rows]
+
+    except Exception as e:
+        print("Order fetch unavailable:", e)
+        return []
+
 HOME_TEMPLATE = """
 <!doctype html>
 <html lang="en">
@@ -106,12 +138,62 @@ HOME_TEMPLATE = """
             padding: 28px;
         }
 
-        .shell {
-            width: min(1100px, 100%);
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 24px;
-            align-items: stretch;
+        .workspace {
+            width: min(1200px, 100%);
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+            color: white;
+        }
+
+        .topbar small {
+            opacity: 0.9;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .ghost-btn {
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+
+        .viewport {
+            overflow: hidden;
+            border-radius: 28px;
+        }
+
+        .slider {
+            display: flex;
+            width: 200%;
+            transition: transform 0.45s ease;
+        }
+
+        .slider.show-orders {
+            transform: translateX(-50%);
+        }
+
+        .panel-screen {
+            width: 50%;
+            padding-right: 12px;
+        }
+
+        .panel-screen:last-child {
+            padding-right: 0;
         }
 
         .hero, .panel {
@@ -182,6 +264,19 @@ HOME_TEMPLATE = """
             border: 1px solid rgba(255, 255, 255, 0.35);
         }
 
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .panel-subtitle {
+            margin: 0 0 18px;
+            color: var(--muted);
+        }
+
         .panel h2 {
             margin: 0 0 8px;
             font-size: 1.8rem;
@@ -250,6 +345,68 @@ HOME_TEMPLATE = """
             border: 1px solid rgba(183, 28, 28, 0.24);
         }
 
+        .orders-controls {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 18px;
+        }
+
+        .orders-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .order-card {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(183, 28, 28, 0.12);
+            background: linear-gradient(180deg, #fff, #fff7df);
+        }
+
+        .order-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+
+        .order-actions {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+        }
+
+        .mini-btn {
+            width: auto;
+            padding: 12px 14px;
+            margin-top: 0;
+            border-radius: 14px;
+        }
+
+        .btn.secondary {
+            background: linear-gradient(90deg, #7f0909, #c2410c);
+        }
+
+        .btn.small {
+            padding: 12px 14px;
+            font-size: 0.95rem;
+        }
+
+        .danger {
+            background: linear-gradient(90deg, #9b1c1c, #ef4444);
+        }
+
+        .inline-fields {
+            display: grid;
+            grid-template-columns: 0.8fr 1.2fr;
+            gap: 10px;
+        }
+
         .summary {
             margin-top: 18px;
             padding: 18px;
@@ -268,65 +425,174 @@ HOME_TEMPLATE = """
         }
 
         @media (max-width: 900px) {
-            .shell { grid-template-columns: 1fr; }
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
             .stats { grid-template-columns: 1fr; }
+            .orders-controls, .order-actions, .inline-fields { grid-template-columns: 1fr; }
+            .panel-screen { width: 50%; }
         }
     </style>
 </head>
 <body>
-    <main class="shell">
-        <section class="hero">
-            <div class="badge">NSUBUGA HOT MEALS</div>
-            <h1>Fast, fun, and built for hungry people.</h1>
-            <p class="lead">
-                Enter your customer ID, choose your meal from the dropdown, and send your order straight to the kitchen.
-                Clean, simple, and styled like a classic red-and-yellow burger joint.
-            </p>
-
-            <div class="stats">
-                <div class="stat"><strong>01</strong>Pick your meal</div>
-                <div class="stat"><strong>02</strong>Enter your ID</div>
-                <div class="stat"><strong>03</strong>Place order</div>
+    <div class="workspace">
+        <div class="topbar">
+            <div>
+                <div class="badge">NSUBUGA HOT MEALS</div>
+                <small>Simple ordering with slide-over order management</small>
             </div>
-
-            {% if confirmation %}
-            <div class="summary">
-                <h3>Order received</h3>
-                <p><span>Customer ID:</span> {{ confirmation.customer_id }}</p>
-                <p><span>Order:</span> {{ confirmation.menu_item }}</p>
-                <p><span>Status:</span> {{ confirmation.status }}</p>
+            <div class="top-actions">
+                <button class="ghost-btn" type="button" data-slide="order">Order panel</button>
+                <button class="ghost-btn" type="button" data-slide="orders">My orders</button>
             </div>
-            {% endif %}
-        </section>
+        </div>
 
-        <section class="panel">
-            <h2>Start your order</h2>
-            <p>Use the form below to submit a simple restaurant order.</p>
+        <div class="viewport">
+            <div class="slider {% if start_panel == 'orders' %}show-orders{% endif %}" id="panelSlider">
+                <section class="panel-screen">
+                    <div class="shell">
+                        <section class="hero">
+                            <div class="badge">NSUBUGA HOT MEALS</div>
+                            <h1>Fast, fun, and built for hungry people.</h1>
+                            <p class="lead">
+                                Enter your customer ID, choose your meal from the dropdown, and send your order straight to the kitchen.
+                                Clean, simple, and styled like a classic red-and-yellow burger joint.
+                            </p>
 
-            {% if error %}
-            <div class="message error">{{ error }}</div>
-            {% endif %}
+                            <div class="stats">
+                                <div class="stat"><strong>01</strong>Pick your meal</div>
+                                <div class="stat"><strong>02</strong>Enter your ID</div>
+                                <div class="stat"><strong>03</strong>Place order</div>
+                            </div>
 
-            {% if saved_to_db %}
-            <div class="message success">Your order was saved successfully.</div>
-            {% endif %}
+                            <div class="summary">
+                                <h3>Need another view?</h3>
+                                <p>Use the button to slide over to your orders and manage them.</p>
+                                <button class="btn secondary" type="button" data-slide="orders">View my orders</button>
+                            </div>
 
-            <form method="post">
-                <label for="customer_id">Customer ID</label>
-                <input id="customer_id" name="customer_id" placeholder="Enter your customer ID" value="{{ customer_id or '' }}" required>
+                            {% if confirmation %}
+                            <div class="summary">
+                                <h3>Order received</h3>
+                                <p><span>Customer ID:</span> {{ confirmation.customer_id }}</p>
+                                <p><span>Order:</span> {{ confirmation.menu_item }}</p>
+                                <p><span>Status:</span> {{ confirmation.status }}</p>
+                            </div>
+                            {% endif %}
+                        </section>
 
-                <label for="menu_item">Menu Item</label>
-                <select id="menu_item" name="menu_item" required>
-                    <option value="" disabled {% if not menu_item %}selected{% endif %}>Choose your order</option>
-                    {% for item in menu_items %}
-                    <option value="{{ item }}" {% if menu_item == item %}selected{% endif %}>{{ item }}</option>
-                    {% endfor %}
-                </select>
+                        <section class="panel">
+                            <div class="panel-header">
+                                <div>
+                                    <h2>Start your order</h2>
+                                    <p class="panel-subtitle">Use the form below to submit a simple restaurant order.</p>
+                                </div>
+                                <button class="ghost-btn" type="button" data-slide="orders">Go to orders</button>
+                            </div>
 
-                <button class="btn" type="submit">Place Order</button>
-            </form>
-        </section>
-    </main>
+                            {% if error %}
+                            <div class="message error">{{ error }}</div>
+                            {% endif %}
+
+                            {% if saved_to_db %}
+                            <div class="message success">Your order was saved successfully.</div>
+                            {% endif %}
+
+                            <form method="post">
+                                <label for="customer_id">Customer ID</label>
+                                <input id="customer_id" name="customer_id" placeholder="Enter your customer ID" value="{{ customer_id or '' }}" required>
+
+                                <label for="menu_item">Menu Item</label>
+                                <select id="menu_item" name="menu_item" required>
+                                    <option value="" disabled {% if not menu_item %}selected{% endif %}>Choose your order</option>
+                                    {% for item in menu_items %}
+                                    <option value="{{ item }}" {% if menu_item == item %}selected{% endif %}>{{ item }}</option>
+                                    {% endfor %}
+                                </select>
+
+                                <button class="btn" type="submit">Place Order</button>
+                            </form>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="panel-screen">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>My orders</h2>
+                                <p class="panel-subtitle">Search, edit, or delete your restaurant orders.</p>
+                            </div>
+                            <button class="ghost-btn" type="button" data-slide="order">Back to order form</button>
+                        </div>
+
+                        <form method="get" action="/" class="orders-controls">
+                            <div>
+                                <label for="customer_filter">Filter by Customer ID</label>
+                                <input id="customer_filter" name="customer_id" value="{{ filter_customer_id or '' }}" placeholder="Enter your customer ID">
+                                <input type="hidden" name="panel" value="orders">
+                            </div>
+                            <button class="btn mini-btn" type="submit">Find my orders</button>
+                        </form>
+
+                        {% if orders_error %}
+                        <div class="message error">{{ orders_error }}</div>
+                        {% endif %}
+
+                        <div class="orders-list">
+                            {% if orders %}
+                            {% for order in orders %}
+                            <div class="order-card">
+                                <div class="order-meta">
+                                    <span><strong>#{{ order.id }}</strong></span>
+                                    <span>Customer: {{ order.customer_id }}</span>
+                                    <span>{{ order.created_at }}</span>
+                                </div>
+
+                                <form method="post" action="/orders/{{ order.id }}/update" class="order-actions">
+                                    <input type="hidden" name="panel" value="orders">
+                                    <input type="hidden" name="customer_filter" value="{{ filter_customer_id or '' }}">
+                                    <div class="inline-fields">
+                                        <input name="customer_id" value="{{ order.customer_id }}" required>
+                                        <select name="menu_item" required>
+                                            {% for item in menu_items %}
+                                            <option value="{{ item }}" {% if order.menu_item == item %}selected{% endif %}>{{ item }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <button class="btn small" type="submit">Save</button>
+                                </form>
+
+                                <form method="post" action="/orders/{{ order.id }}/delete">
+                                    <input type="hidden" name="customer_filter" value="{{ filter_customer_id or '' }}">
+                                    <button class="btn small danger" type="submit">Delete</button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <div class="summary">
+                                <h3>No orders yet</h3>
+                                <p>Place an order first, then slide back here to manage it.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const slider = document.getElementById("panelSlider");
+        document.querySelectorAll("[data-slide]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const target = button.getAttribute("data-slide");
+                slider.classList.toggle("show-orders", target === "orders");
+            });
+        });
+    </script>
 </body>
 </html>
 """
@@ -353,11 +619,52 @@ def save_order(customer_id, menu_item):
         return None
 
 
+def update_order(order_id, customer_id, menu_item):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute(
+            "UPDATE orders SET customer_id=%s, menu_item=%s WHERE id=%s;",
+            (customer_id, menu_item, order_id)
+        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+
+    except Exception as e:
+        print("Order update unavailable:", e)
+        return False
+
+
+def remove_order(order_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("DELETE FROM orders WHERE id=%s;", (order_id,))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+
+    except Exception as e:
+        print("Order delete unavailable:", e)
+        return False
+
+
 @app.route("/", methods=["GET", "POST"])
 def home():
     confirmation = None
     error = None
     saved_to_db = False
+    filter_customer_id = request.args.get("customer_id", "").strip()
+    start_panel = request.args.get("panel", "order")
+    orders_error = None
+    orders = get_orders(filter_customer_id or None)
 
     if request.method == "POST":
         customer_id = request.form.get("customer_id", "").strip()
@@ -384,6 +691,10 @@ def home():
             customer_id=customer_id,
             menu_item=menu_item,
             menu_items=MENU_ITEMS,
+            orders=orders,
+            orders_error=orders_error,
+            filter_customer_id=filter_customer_id,
+            start_panel="orders",
         )
 
     return render_template_string(
@@ -394,7 +705,34 @@ def home():
         customer_id="",
         menu_item="",
         menu_items=MENU_ITEMS,
+        orders=orders,
+        orders_error=orders_error,
+        filter_customer_id=filter_customer_id,
+        start_panel=start_panel,
     )
+
+
+@app.route("/orders/<int:order_id>/update", methods=["POST"])
+def update_order_route(order_id):
+    customer_id = request.form.get("customer_id", "").strip()
+    menu_item = request.form.get("menu_item", "").strip()
+    customer_filter = request.form.get("customer_filter", "").strip()
+
+    if not customer_id or not menu_item:
+        return redirect(url_for("home", panel="orders", customer_id=customer_filter))
+
+    if menu_item not in MENU_ITEMS:
+        return redirect(url_for("home", panel="orders", customer_id=customer_filter))
+
+    update_order(order_id, customer_id, menu_item)
+    return redirect(url_for("home", panel="orders", customer_id=customer_filter))
+
+
+@app.route("/orders/<int:order_id>/delete", methods=["POST"])
+def delete_order_route(order_id):
+    customer_filter = request.form.get("customer_filter", "").strip()
+    remove_order(order_id)
+    return redirect(url_for("home", panel="orders", customer_id=customer_filter))
 
 
 # CREATE
