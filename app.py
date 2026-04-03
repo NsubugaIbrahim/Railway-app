@@ -276,7 +276,7 @@ HOME_TEMPLATE = """
 <body>
     <main class="shell">
         <section class="hero">
-            <div class="badge">Ketchup &amp; Mustard Grill</div>
+            <div class="badge">NSUBUGA HOT MEALS</div>
             <h1>Fast, fun, and built for hungry people.</h1>
             <p class="lead">
                 Enter your customer ID, choose your meal from the dropdown, and send your order straight to the kitchen.
